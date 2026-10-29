@@ -1,0 +1,38 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# CRITICAL: Disable Pretty URLs to prevent trailing slash 301 redirects
+# Without this, Netlify redirects /blogs/slug → /blogs/slug/ (301)
+# which causes Bing to reject the URL as "page is a redirect"
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = false
+
+# Force no trailing slash — redirect /path/ to /path (301)
+[[redirects]]
+  from = "/blogs/*/"
+  to = "/blogs/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/services/*/"
+  to = "/services/:splat"
+  status = 301
+  force = true
+
+# General trailing slash removal for all paths
+[[redirects]]
+  from = "/*/"
+  to = "/:splat"
+  status = 301
+  force = false
+
+# SPA fallback (same as _redirects but here for completeness)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

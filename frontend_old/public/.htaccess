@@ -1,0 +1,56 @@
+# Prevent Apache mod_dir from auto-adding trailing slash to directory URLs
+# MUST be outside IfModule mod_rewrite — this is a mod_dir directive
+# On cPanel, without this, /blogs/slug gets 301'd to /blogs/slug/ which Bing rejects
+<IfModule mod_dir.c>
+  DirectorySlash Off
+</IfModule>
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve prerendered HTML files: handles BOTH /path and /path/ WITHOUT any redirect
+  # Uses non-greedy match with optional trailing slash so both versions serve content directly
+  # Bing rejects 301 redirects — so we serve content at both URLs and let <link canonical> deduplicate
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
+  RewriteRule ^(.+?)/?$ /$1/index.html [L]
+
+  # SPA fallback: anything else goes to /index.html for React Router
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_URI} !^/uploads/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# SEO Headers — always allow indexing
+<IfModule mod_headers.c>
+  # Default: allow indexing on all pages
+  Header set X-Robots-Tag "index, follow"
+
+  # Blog pages — explicitly indexable
+  <FilesMatch "^index\.html$">
+    Header set X-Robots-Tag "index, follow"
+  </FilesMatch>
+
+  # Security headers
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Cache static assets aggressively
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>

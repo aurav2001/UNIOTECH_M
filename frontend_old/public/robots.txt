@@ -1,0 +1,19 @@
+# Allow all crawlers full access
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+
+# Googlebot specific
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+
+# Static sitemap (pages + services)
+Sitemap: https://uniotechit.com/sitemap.xml
+
+# Dynamic sitemap (includes latest blogs)
+Sitemap: https://api.uniotechit.com/api/sitemap.xml
+
+# Host directive
+Host: https://uniotechit.com

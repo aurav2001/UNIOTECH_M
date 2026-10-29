@@ -1,0 +1,12 @@
+# Serve prerendered HTML files first (built by prerender.js)
+# These have full SEO content, canonical tags, JSON-LD, etc.
+# Netlify automatically serves /about/index.html for /about etc.
+
+# Remove trailing slashes to prevent 301 redirect chains
+# Bing rejects URLs that redirect, so we must serve content at the canonical URL
+/blogs/*/    /blogs/:splat    301!
+/services/*/    /services/:splat    301!
+
+# SPA fallback: Any route not matching a prerendered file gets index.html
+# Using 200 ensures React Router handles client-side navigation
+/*    /index.html   200

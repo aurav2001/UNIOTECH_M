@@ -1,0 +1,28 @@
+{
+  "name": "uniotech-platform",
+  "version": "1.0.0",
+  "description": "UnioTech IT Solutions - Enterprise IT Management, Client Portal & Dynamic Admin CMS",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix backend_s && npm install --prefix frontend_old",
+    "dev:backend": "npm run dev --prefix backend_s",
+    "dev:frontend": "npm run dev --prefix frontend_old",
+    "build:frontend": "npm run build --prefix frontend_old"
+  },
+  "keywords": [
+    "react",
+    "vite",
+    "nodejs",
+    "express",
+    "sequelize",
+    "mysql",
+    "sqlite",
+    "helpdesk",
+    "client-portal",
+    "amc",
+    "gemini-ai",
+    "it-management"
+  ],
+  "author": "Gaurav Pandey",
+  "license": "ISC"
+}
