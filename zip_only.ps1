@@ -1,46 +1,71 @@
-# PowerShell script to package frontend, backend, and full project using native tar
-$rootDir = Get-Item .
+# PowerShell script to package frontend, backend, and full project inside a single parent folder using Windows-native Compress-Archive
+$rootDir = (Get-Item .).FullName
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  UNiOTECH IT SOLUTIONS - FULL BACKUP     " -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
-# 1. Package Frontend Source Code
-Write-Host "[1/5] Packaging Frontend Source..." -ForegroundColor Yellow
-$feSourceZip = "UNi_Frontend_Source_Backup.zip"
-if (Test-Path $feSourceZip) { Remove-Item $feSourceZip -Force }
-tar -a -c -f $feSourceZip --exclude="node_modules" --exclude="dist" --exclude="*.zip" --exclude=".git" -C frontend_old .
-Write-Host "  -> Frontend Source: $feSourceZip" -ForegroundColor Green
+$baseStage = Join-Path $rootDir "backup_stage"
+if (Test-Path $baseStage) { Remove-Item -Recurse -Force $baseStage -ErrorAction SilentlyContinue }
 
-# 2. Package Frontend Production Build (Dist)
-Write-Host "[2/5] Packaging Frontend Dist (cPanel / Static)..." -ForegroundColor Yellow
-$frontendZip = "UNi_Frontend_Final_Verified.zip"
-if (Test-Path $frontendZip) { Remove-Item $frontendZip -Force }
-tar -a -c -f $frontendZip -C frontend_old/dist .
-Write-Host "  -> Frontend Dist: $frontendZip" -ForegroundColor Green
+$fullStage = Join-Path $baseStage "UnioTech_Project_Backup"
+$feStage   = Join-Path $baseStage "UnioTech_Frontend"
+$beStage   = Join-Path $baseStage "UnioTech_Backend"
 
-# 3. Package Backend Source Code
-Write-Host "[3/5] Packaging Backend Source..." -ForegroundColor Yellow
-$beSourceZip = "UNi_Backend_Source_Backup.zip"
-if (Test-Path $beSourceZip) { Remove-Item $beSourceZip -Force }
-tar -a -c -f $beSourceZip --exclude="node_modules" --exclude="dev_database.sqlite" --exclude="*.zip" --exclude=".git" -C backend_s .
-Write-Host "  -> Backend Source: $beSourceZip" -ForegroundColor Green
+New-Item -ItemType Directory -Path (Join-Path $fullStage "backend") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $fullStage "frontend") -Force | Out-Null
+New-Item -ItemType Directory -Path $feStage -Force | Out-Null
+New-Item -ItemType Directory -Path $beStage -Force | Out-Null
 
-# 4. Package Backend Production Package (No .env)
-Write-Host "[4/5] Packaging Backend Production Deployment Package..." -ForegroundColor Yellow
-$backendZip = "UNi_Backend_Final_Verified.zip"
-if (Test-Path $backendZip) { Remove-Item $backendZip -Force }
-tar -a -c -f $backendZip --exclude="node_modules" --exclude="dev_database.sqlite" --exclude=".env" --exclude=".git" --exclude="*.zip" -C backend_s .
-Write-Host "  -> Backend Deployment: $backendZip" -ForegroundColor Green
+# 1. Staging Backend
+Write-Host "[1/3] Preparing Backend files..." -ForegroundColor Yellow
+robocopy "backend_s" (Join-Path $fullStage "backend") /E /XD "node_modules" ".git" /XF "*.zip" "dev_database.sqlite" | Out-Null
+robocopy "backend_s" $beStage /E /XD "node_modules" ".git" /XF "*.zip" "dev_database.sqlite" | Out-Null
 
-# 5. Package Full Monorepo (Frontend + Backend + Documentation)
-Write-Host "[5/5] Packaging Complete Monorepo Project..." -ForegroundColor Yellow
-$fullProjectZip = "UNi_Full_Project_Backup.zip"
-if (Test-Path $fullProjectZip) { Remove-Item $fullProjectZip -Force }
-tar -a -c -f $fullProjectZip --exclude="node_modules" --exclude="*/node_modules" --exclude="dist" --exclude="*/dist" --exclude="*.zip" --exclude="*/*.zip" --exclude=".git" --exclude="dev_database.sqlite" --exclude="*/dev_database.sqlite" .
-Write-Host "  -> Full Monorepo: $fullProjectZip" -ForegroundColor Green
+# 2. Staging Frontend Source
+Write-Host "[2/3] Preparing Frontend files..." -ForegroundColor Yellow
+robocopy "frontend_old" (Join-Path $fullStage "frontend") /E /XD "node_modules" "dist" ".git" /XF "*.zip" | Out-Null
+robocopy "frontend_old" $feStage /E /XD "node_modules" "dist" ".git" /XF "*.zip" | Out-Null
+
+# 3. Root Documentation & Configurations
+Copy-Item "README.md" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "UnioTech_Project_Documentation.md" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "UnioTech_Project_Documentation.docx" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "UnioTech_Project_Complete_Documentation.docx" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "Unio_Project_Documentation_Updated.docx" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "package.json" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item ".env.example" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item ".gitignore" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "build_and_zip.ps1" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "zip_only.ps1" "$fullStage\" -Force -ErrorAction SilentlyContinue
+Copy-Item "zip_deployment.ps1" "$fullStage\" -Force -ErrorAction SilentlyContinue
+
+# 4. Generate Windows Native ZIP Archives
+Write-Host "[3/3] Compressing archives using native Compress-Archive..." -ForegroundColor Yellow
+
+# Full Monorepo
+$fullZip = "UnioTech_Full_Project_Backup.zip"
+if (Test-Path $fullZip) { Remove-Item $fullZip -Force }
+Compress-Archive -Path $fullStage -DestinationPath $fullZip -Force
+Write-Host "  -> Full Project Backup: $fullZip" -ForegroundColor Green
+
+# Frontend Only
+$feZip = "UnioTech_Frontend_Backup.zip"
+if (Test-Path $feZip) { Remove-Item $feZip -Force }
+Compress-Archive -Path $feStage -DestinationPath $feZip -Force
+Write-Host "  -> Frontend Backup: $feZip" -ForegroundColor Green
+
+# Backend Only
+$beZip = "UnioTech_Backend_Backup.zip"
+if (Test-Path $beZip) { Remove-Item $beZip -Force }
+Compress-Archive -Path $beStage -DestinationPath $beZip -Force
+Write-Host "  -> Backend Backup: $beZip" -ForegroundColor Green
+
+# Cleanup Staging
+Remove-Item -Recurse -Force $baseStage -ErrorAction SilentlyContinue
 
 Write-Host "==========================================" -ForegroundColor Green
-Write-Host "  All 5 backups generated successfully!   " -ForegroundColor Green
+Write-Host "  All backups generated successfully!   " -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
+
 
